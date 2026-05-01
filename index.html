@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Product Search</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;700;800&family=Instrument+Sans:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #f5f3ee;
+  --surface: #ffffff;
+  --surface2: #edeae3;
+  --border: rgba(0,0,0,0.1);
+  --border-strong: rgba(0,0,0,0.18);
+  --text: #1a1a18;
+  --text-muted: #6b6960;
+  --text-faint: #b0ad a5;
+  --accent: #1a1a18;
+  --accent-fg: #f5f3ee;
+  --tag-product: #e8f4e8;
+  --tag-product-text: #2a5c2a;
+  --red: #c0392b;
+  --radius: 12px;
+  --radius-sm: 6px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #111110;
+    --surface: #1c1c1a;
+    --surface2: #252522;
+    --border: rgba(255,255,255,0.08);
+    --border-strong: rgba(255,255,255,0.15);
+    --text: #f0ede6;
+    --text-muted: #8a877f;
+    --accent: #f0ede6;
+    --accent-fg: #111110;
+    --tag-product: #1a2e1a;
+    --tag-product-text: #7ec87e;
+    --red: #e05c4a;
+  }
+}
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Instrument Sans', sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.app {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  grid-template-rows: auto 1fr;
+}
+
+/* â”€â”€ Sidebar â”€â”€ */
+.sidebar {
+  grid-row: 1 / 3;
+  border-right: 1px solid var(--border);
+  padding: 32px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  background: var(--surface);
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logo-mark {
+  width: 32px;
+  height: 32px;
+  background: var(--accent);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo-mark svg { color: var(--accent-fg); }
+
+.logo-text {
+  font-family: 'Syne', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.sidebar-section { display: flex; flex-direction: column; gap: 10px; }
+
+.sidebar-label {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+input[type="text"], input[type="number"], input[type="url"] {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: 'Instrument Sans', sans-serif;
+  font-size: 14px;
+  padding: 9px 12px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  appearance: none;
+}
+input::placeholder { color: var(--text-muted); opacity: 0.6; }
+input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(26,26,24,0.08);
+}
+@media (prefers-color-scheme: dark) {
+  input:focus { box-shadow: 0 0 0 3px rgba(240,237,230,0.1); }
+}
+
+.limit-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+.search-btn {
+  width: 100%;
+  background: var(--accent);
+  color: var(--accent-fg);
+  border: none;
+  border-radius: var(--radius-sm);
+  font-family: 'Syne', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  padding: 11px 20px;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.search-btn:hover { opacity: 0.85; }
+.search-btn:active { transform: scale(0.98); }
+.search-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 100px;
+  background: var(--surface2);
+  font-size: 12px;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+
+.status-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--border-strong);
+  transition: background 0.3s;
+  flex-shrink: 0;
+}
+.status-dot.loading { background: #f59e0b; animation: blink 1s ease infinite; }
+.status-dot.done { background: #16a34a; }
+.status-dot.error { background: var(--red); }
+
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+.sidebar-footer {
+  margin-top: auto;
+  font-size: 12px;
+  color: var(--text-muted);
+  opacity: 0.6;
+  line-height: 1.6;
+}
+
+/* â”€â”€ Top bar â”€â”€ */
+.topbar {
+  border-bottom: 1px solid var(--border);
+  padding: 20px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--surface);
+}
+
+.topbar-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.result-count {
+  font-size: 13px;
+  color: var(--text-muted);
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  padding: 4px 12px;
+}
+
+/* â”€â”€ Main content â”€â”€ */
+.main {
+  padding: 32px;
+  overflow-y: auto;
+}
+
+/* â”€â”€ Product grid â”€â”€ */
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.product-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.15s;
+  animation: cardIn 0.3s ease both;
+  text-decoration: none;
+  display: block;
+  color: inherit;
+}
+
+.product-card:hover {
+  border-color: var(--border-strong);
+  transform: translateY(-2px);
+}
+
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.card-image {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  background: var(--surface2);
+  overflow: hidden;
+  position: relative;
+}
+
+.card-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: opacity 0.2s;
+}
+
+.card-image .placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--text-muted);
+  opacity: 0.4;
+}
+
+.placeholder-icon {
+  width: 32px;
+  height: 32px;
+  opacity: 0.5;
+}
+
+.card-body { padding: 14px; }
+
+.card-name {
+  font-family: 'Syne', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 6px;
+}
+
+.card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.card-id {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 120px;
+}
+
+.badge {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  padding: 2px 7px;
+  border-radius: 100px;
+  background: var(--tag-product);
+  color: var(--tag-product-text);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* â”€â”€ Skeleton â”€â”€ */
+.skeleton-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.skeleton-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.skel {
+  background: var(--surface2);
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0%   { opacity: 0.7; }
+  50%  { opacity: 0.4; }
+  100% { opacity: 0.7; }
+}
+
+.skel-image { width: 100%; aspect-ratio: 1/1; }
+.skel-body { padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+.skel-line { height: 13px; border-radius: 4px; }
+.skel-line.wide { width: 75%; }
+.skel-line.narrow { width: 45%; }
+
+/* â”€â”€ States â”€â”€ */
+.empty-state, .error-state, .idle-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 320px;
+  gap: 12px;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.state-icon {
+  width: 48px;
+  height: 48px;
+  opacity: 0.25;
+}
+
+.state-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text);
+  opacity: 0.4;
+}
+
+.state-sub {
+  font-size: 13px;
+  color: var(--text-muted);
+  max-width: 260px;
+  line-height: 1.6;
+}
+
+.error-state .state-title { color: var(--red); opacity: 1; }
+.error-state { color: var(--red); }
+
+/* â”€â”€ Spinner â”€â”€ */
+.spinner {
+  width: 18px; height: 18px;
+  border: 2px solid var(--accent-fg);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* â”€â”€ Responsive â”€â”€ */
+@media (max-width: 720px) {
+  .app { grid-template-columns: 1fr; grid-template-rows: auto auto 1fr; }
+  .sidebar { grid-row: auto; border-right: none; border-bottom: 1px solid var(--border); padding: 20px; }
+  .topbar { padding: 16px 20px; }
+  .main { padding: 20px; }
+  .sidebar-footer { display: none; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-mark">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="2" y="2" width="5" height="5" rx="1" fill="currentColor"/>
+          <rect x="9" y="2" width="5" height="5" rx="1" fill="currentColor" opacity="0.6"/>
+          <rect x="2" y="9" width="5" height="5" rx="1" fill="currentColor" opacity="0.6"/>
+          <rect x="9" y="9" width="5" height="5" rx="1" fill="currentColor"/>
+        </svg>
+      </div>
+      <span class="logo-text">Seller Dashboard</span>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">API Base URL</div>
+      <input type="url" id="base-url" value="http://localhost:8000" placeholder="http://localhost:8000" />
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Search Query</div>
+      <input type="text" id="query" placeholder="e.g. blue linen shirtâ€¦" autocomplete="off" />
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Options</div>
+      <div class="limit-row">
+        <div>
+          <div class="sidebar-label" style="margin-bottom:6px">Limit</div>
+          <input type="number" id="limit" value="20" min="1" max="50" />
+        </div>
+      </div>
+    </div>
+
+    <button class="search-btn" id="search-btn" onclick="runSearch()">
+      <span id="btn-label">Search</span>
+      <svg id="btn-arrow" width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M3 7h8M7.5 3.5L11 7l-3.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <div class="spinner" id="btn-spinner" style="display:none"></div>
+    </button>
+
+    <div>
+      <div class="sidebar-label" style="margin-bottom:8px">Status</div>
+      <div class="status-pill">
+        <div class="status-dot" id="status-dot"></div>
+        <span id="status-text">Ready</span>
+      </div>
+    </div>
+
+    <div class="sidebar-footer">
+      Results from Elasticsearch + GraphQL.<br>
+      Click any card to open product page.
+    </div>
+  </aside>
+
+  <!-- Top bar -->
+  <div class="topbar">
+    <div class="topbar-title" id="topbar-title">Products</div>
+    <div class="result-count" id="result-count" style="display:none"></div>
+  </div>
+
+  <!-- Main -->
+  <main class="main" id="main">
+    <div class="idle-state">
+      <svg class="state-icon" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="8" y="8" width="14" height="14" rx="3" fill="currentColor"/>
+        <rect x="26" y="8" width="14" height="14" rx="3" fill="currentColor" opacity="0.5"/>
+        <rect x="8" y="26" width="14" height="14" rx="3" fill="currentColor" opacity="0.5"/>
+        <rect x="26" y="26" width="14" height="14" rx="3" fill="currentColor"/>
+      </svg>
+      <div class="state-title">Enter a search query</div>
+      <div class="state-sub">Type a product name, color, or description and hit Search to find matching products.</div>
+    </div>
+  </main>
+
+</div>
+
+<script>
+  let abortCtrl = null;
+
+  const queryEl   = document.getElementById('query');
+  const baseUrlEl = document.getElementById('base-url');
+  const limitEl   = document.getElementById('limit');
+  const btn       = document.getElementById('search-btn');
+  const btnLabel  = document.getElementById('btn-label');
+  const btnArrow  = document.getElementById('btn-arrow');
+  const btnSpinner= document.getElementById('btn-spinner');
+  const dot       = document.getElementById('status-dot');
+  const statusTxt = document.getElementById('status-text');
+  const mainEl    = document.getElementById('main');
+  const titleEl   = document.getElementById('topbar-title');
+  const countEl   = document.getElementById('result-count');
+
+  [queryEl, baseUrlEl].forEach(el =>
+    el.addEventListener('keydown', e => { if (e.key === 'Enter') runSearch(); })
+  );
+
+  function setStatus(state, msg) {
+    dot.className = 'status-dot ' + state;
+    statusTxt.textContent = msg;
+  }
+
+  function setLoading(loading) {
+    btn.disabled = loading;
+    btnLabel.textContent = loading ? 'Searching' : 'Search';
+    btnArrow.style.display = loading ? 'none' : 'block';
+    btnSpinner.style.display = loading ? 'block' : 'none';
+  }
+
+  function showSkeletons() {
+    const cards = Array.from({length: 8}, (_, i) => `
+      <div class="skeleton-card" style="animation-delay:${i*0.05}s">
+        <div class="skel skel-image"></div>
+        <div class="skel-body">
+          <div class="skel skel-line wide"></div>
+          <div class="skel skel-line narrow"></div>
+        </div>
+      </div>`).join('');
+    mainEl.innerHTML = `<div class="skeleton-grid">${cards}</div>`;
+  }
+
+  function renderResults(results, ms) {
+    countEl.style.display = 'inline-flex';
+    countEl.textContent = `${results.length} result${results.length !== 1 ? 's' : ''} Â· ${ms}ms`;
+    titleEl.textContent = 'Products';
+
+    if (!results.length) {
+      mainEl.innerHTML = `
+        <div class="empty-state">
+          <svg class="state-icon" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="21" cy="21" r="13" stroke="currentColor" stroke-width="3"/>
+            <path d="M30.5 30.5L40 40" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+            <path d="M16 21h10M21 16v10" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity="0.4"/>
+          </svg>
+          <div class="state-title">No results found</div>
+          <div class="state-sub">Try a different search term or check that products are indexed in Elasticsearch.</div>
+        </div>`;
+      return;
+    }
+
+    const cards = results.map((r, i) => {
+      const imgHtml = r.image_url
+        ? `<img src="${escHtml(r.image_url)}" alt="${escHtml(r.label)}" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">`
+        : '';
+      return `
+        <a class="product-card" href="#" onclick="handleClick(event,'${escAttr(r.url)}','${escAttr(r.label)}')" style="animation-delay:${i*0.04}s">
+          <div class="card-image">
+            ${imgHtml}
+            <div class="placeholder" style="${r.image_url ? 'display:none' : ''}">
+              <svg class="placeholder-icon" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="4" y="4" width="24" height="24" rx="4" stroke="currentColor" stroke-width="2"/>
+                <circle cx="12" cy="13" r="3" stroke="currentColor" stroke-width="1.5"/>
+                <path d="M4 22l6-5 5 4 4-3 9 6" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+              </svg>
+              <span style="font-size:11px">No image</span>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="card-name">${escHtml(r.label)}</div>
+            <div class="card-meta">
+              <span class="card-id">${escHtml(r.id)}</span>
+              <span class="badge">${escHtml(r.type)}</span>
+            </div>
+          </div>
+        </a>`;
+    }).join('');
+
+    mainEl.innerHTML = `<div class="product-grid">${cards}</div>`;
+  }
+
+  function handleClick(e, url, label) {
+    e.preventDefault();
+    const base = baseUrlEl.value.replace(/\/$/, '');
+    const full = base + url;
+    console.log('Product URL:', full);
+    showToast(label);
+  }
+
+  function showToast(label) {
+    const t = document.createElement('div');
+    t.textContent = label;
+    Object.assign(t.style, {
+      position: 'fixed', bottom: '24px', right: '24px',
+      background: 'var(--surface)',
+      border: '1px solid var(--border-strong)',
+      color: 'var(--text)',
+      fontFamily: "'Instrument Sans', sans-serif",
+      fontSize: '13px', padding: '10px 16px',
+      borderRadius: '8px',
+      zIndex: 9999, opacity: 0,
+      transition: 'opacity 0.2s',
+      maxWidth: '280px',
+      whiteSpace: 'nowrap',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis'
+    });
+    document.body.appendChild(t);
+    requestAnimationFrame(() => { t.style.opacity = 1; });
+    setTimeout(() => { t.style.opacity = 0; setTimeout(() => t.remove(), 200); }, 2500);
+  }
+
+  async function runSearch() {
+    const q       = queryEl.value.trim();
+    const base    = baseUrlEl.value.replace(/\/$/, '');
+    const limit   = parseInt(limitEl.value) || 20;
+
+    if (!q) { queryEl.focus(); return; }
+    if (!base) { baseUrlEl.focus(); return; }
+
+    if (abortCtrl) abortCtrl.abort();
+    abortCtrl = new AbortController();
+
+    setLoading(true);
+    setStatus('loading', 'Searchingâ€¦');
+    countEl.style.display = 'none';
+    showSkeletons();
+
+    let url = `${base}/search?q=${encodeURIComponent(q)}&limit=${limit}`;
+
+    titleEl.textContent = `"${q}"`;
+
+    try {
+      const t0 = performance.now();
+      const res = await fetch(url, { signal: abortCtrl.signal });
+      const ms  = Math.round(performance.now() - t0);
+
+      if (!res.ok) {
+        const err = await res.text();
+        throw new Error(`HTTP ${res.status}: ${err}`);
+      }
+
+      const data = await res.json();
+      const results = data.results || [];
+
+      setStatus('done', `Done Â· ${ms}ms`);
+      renderResults(results, ms);
+    } catch (err) {
+      if (err.name === 'AbortError') return;
+      setStatus('error', 'Failed');
+      mainEl.innerHTML = `
+        <div class="error-state">
+          <svg class="state-icon" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" style="opacity:0.7">
+            <circle cx="24" cy="24" r="18" stroke="currentColor" stroke-width="3"/>
+            <path d="M24 16v10M24 31v2" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+          </svg>
+          <div class="state-title">Request failed</div>
+          <div class="state-sub">${escHtml(err.message)}</div>
+        </div>`;
+      countEl.style.display = 'none';
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function escHtml(s) {
+    return String(s).replace(/[&<>"']/g, c =>
+      ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  function escAttr(s) {
+    return String(s).replace(/'/g, "\\'").replace(/"/g, '&quot;');
+  }
+</script>
+</body>
+</html>
